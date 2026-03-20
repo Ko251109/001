@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI合議会</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    background: #0f0f14;
+    color: #e8e8e8;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  h1 { text-align: center; font-size: 1.4rem; margin-bottom: 6px; color: #c8b8e8; }
+  .subtitle { text-align: center; font-size: 0.8rem; color: #888; margin-bottom: 20px; }
+
+  .setup {
+    background: #1a1a24;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  label { font-size: 0.8rem; color: #aaa; display: block; margin-bottom: 4px; }
+  input, textarea {
+    width: 100%;
+    background: #0f0f14;
+    border: 1px solid #444;
+    border-radius: 8px;
+    color: #e8e8e8;
+    padding: 10px;
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  input { margin-bottom: 12px; }
+  textarea { height: 90px; resize: vertical; }
+  input[type="password"] { letter-spacing: 2px; }
+
+  .rounds-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .rounds-row label { margin: 0; white-space: nowrap; }
+  .rounds-row input { width: 60px; margin: 0; text-align: center; }
+
+  button#startBtn {
+    width: 100%;
+    background: #6040c0;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 1rem;
+    font-weight: bold;
+    margin-top: 14px;
+    cursor: pointer;
+  }
+  button#startBtn:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+  #status {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #a08060;
+    margin: 10px 0;
+    min-height: 20px;
+  }
+
+  .speaker {
+    background: #1a1a24;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .speaker-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+  }
+  .sunzi .avatar { background: #2a1a0a; }
+  .drucker .avatar { background: #0a1a2a; }
+  .bezos .avatar { background: #1a2a0a; }
+  .speaker-name { font-weight: bold; font-size: 0.95rem; }
+  .speaker-role { font-size: 0.75rem; color: #888; }
+  .round-badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+    background: #2a2a3a;
+    padding: 2px 8px;
+    border-radius: 10px;
+    color: #888;
+  }
+  .speaker-content {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: #d0d0d0;
+    white-space: pre-wrap;
+  }
+
+  .conclusion {
+    background: #1a1428;
+    border: 1px solid #6040c0;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .conclusion h3 { color: #c8a8f0; margin-bottom: 10px; font-size: 1rem; }
+  .conclusion-content {
+    font-size: 0.9rem;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    color: #d8d0f0;
+  }
+
+  .copy-btn {
+    width: 100%;
+    background: #2a2a3a;
+    color: #c8b8e8;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  #output { margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<h1>⚖️ AI合議会</h1>
+<p class="subtitle">孫子・ドラッカー・ベゾスが悩みを討議</p>
+
+<div class="setup">
+  <label>Anthropic APIキー</label>
+  <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+
+  <label>ラウンド数</label>
+  <div class="rounds-row">
+    <input type="number" id="rounds" value="2" min="1" max="5">
+    <label style="color:#888; font-size:0.8rem;">回（多いほど深い討議、時間がかかります）</label>
+  </div>
+</div>
+
+<div class="setup">
+  <label>悩みを入力してください</label>
+  <textarea id="concern" placeholder="例：副業を始めたいが会社にどう切り出すか迷っている"></textarea>
+  <button id="startBtn" onclick="startCouncil()">合議開始</button>
+</div>
+
+<div id="status"></div>
+<div id="output"></div>
+
+<script>
+const COUNCIL = [
+  {
+    id: "sunzi", name: "孫子", role: "戦略家", emoji: "⚔️",
+    system: "あなたは孫子です。戦略思考・味方分析・組織戦略の第一人者として発言します。常に「勝てる状況を選ぶ」視点で、力の無駄遣いを避けた最短経路を指摘してください。他の論者の意見も踏まえ、戦略的に最も重要な論点を鋭く提示してください。発言は200〜300字程度で簡潔かつ鋭くまとめること。"
+  },
+  {
+    id: "drucker", name: "ドラッカー", role: "経営思想家", emoji: "📊",
+    system: "あなたはピーター・ドラッカーです。マネジメント・知識労働・組織変革の権威として発言します。「成果は何か」「誰の貢献か」「変革をどう正当化するか」を軸に論じてください。他の論者の発言を受けて、経営判断として何を優先すべきかを明示してください。発言は200〜300字程度で簡潔にまとめること。"
+  },
+  {
+    id: "bezos", name: "ベゾス", role: "実行家", emoji: "🚀",
+    system: "あなたはジェフ・ベゾスです。顧客起点の設計・実験文化・長期投資思考の実践者として発言します。「小さく始めて証明する」「承認を取るより既成事実を作る」視点で具体的な行動を提示してください。他の論者の意見を受けて、明日から取れる最初の一手を必ず示してください。発言は200〜300字程度で簡潔にまとめること。"
+  }
+];
+
+async function callAPI(apiKey, systemPrompt, userContent) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+      "anthropic-dangerous-allow-browser": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-opus-4-6",
+      max_tokens: 600,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userContent }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || `API Error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+function setStatus(msg) {
+  document.getElementById("status").textContent = msg;
+}
+
+function addCard(member, content, roundNum) {
+  const el = document.createElement("div");
+  el.className = `speaker ${member.id}`;
+  el.innerHTML = `
+    <div class="speaker-header">
+      <div class="avatar">${member.emoji}</div>
+      <div>
+        <div class="speaker-name">${member.name}</div>
+        <div class="speaker-role">${member.role}</div>
+      </div>
+      <div class="round-badge">Round ${roundNum}</div>
+    </div>
+    <div class="speaker-content">${escHtml(content)}</div>
+  `;
+  document.getElementById("output").appendChild(el);
+  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function addConclusion(text) {
+  const el = document.createElement("div");
+  el.className = "conclusion";
+  el.innerHTML = `<h3>⚖️ 合議結論</h3><div class="conclusion-content">${escHtml(text)}</div>`;
+  document.getElementById("output").appendChild(el);
+
+  const btn = document.createElement("button");
+  btn.className = "copy-btn";
+  btn.textContent = "📋 結論をコピー";
+  btn.onclick = () => { navigator.clipboard.writeText(text); btn.textContent = "✅ コピーしました"; };
+  document.getElementById("output").appendChild(btn);
+  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+async function startCouncil() {
+  const apiKey = document.getElementById("apiKey").value.trim();
+  const concern = document.getElementById("concern").value.trim();
+  const rounds = parseInt(document.getElementById("rounds").value) || 2;
+
+  if (!apiKey) { alert("APIキーを入力してください"); return; }
+  if (!concern) { alert("悩みを入力してください"); return; }
+
+  const btn = document.getElementById("startBtn");
+  btn.disabled = true;
+  document.getElementById("output").innerHTML = "";
+
+  const fullHistory = [];
+
+  try {
+    for (let r = 1; r <= rounds; r++) {
+      for (const member of COUNCIL) {
+        setStatus(`Round ${r} / ${rounds} — ${member.name} が考えています...`);
+
+        let userContent = `【悩み】\n${concern}\n\n【これまでの討議】\n`;
+        if (fullHistory.length > 0) {
+          for (const e of fullHistory) {
+            userContent += `\n■ ${e.name}（${e.role}）Round ${e.round}\n${e.content}\n`;
+          }
+        } else {
+          userContent += "（まだ発言なし。あなたが最初の発言者です）";
+        }
+        userContent += `\n\n上記を踏まえ、${member.name}として発言してください。`;
+
+        const content = await callAPI(apiKey, member.system, userContent);
+        fullHistory.push({ round: r, name: member.name, role: member.role, content });
+        addCard(member, content, r);
+      }
+    }
+
+    // 結論生成
+    setStatus("結論を生成しています...");
+    let histText = fullHistory.map(e =>
+      `■ ${e.name}（${e.role}）Round ${e.round}\n${e.content}`
+    ).join("\n\n");
+
+    const conclusionPrompt =
+      `【悩み】\n${concern}\n\n【討議ログ】\n${histText}\n\n` +
+      "上記の討議を踏まえ、3人の合意として「結論」と「明日から取れる具体的な第一歩」をまとめてください。\n" +
+      "形式：\n## 合議結論\n（結論）\n\n## 推奨する第一歩\n（具体的アクション）";
+
+    const conclusion = await callAPI(apiKey,
+      "あなたは公平な議長です。討議を整理し、合意点と推奨アクションをまとめてください。",
+      conclusionPrompt
+    );
+    addConclusion(conclusion);
+    setStatus("合議完了");
+
+  } catch (e) {
+    setStatus("エラー: " + e.message);
+    alert("エラーが発生しました:\n" + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
