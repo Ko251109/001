@@ -9,7 +9,7 @@ tags: ["live", "yaque-blog", "j−pop", "ライブレポート"]
 
 > **日付**: 2026年03月21日
 
-TWILIGHT SHOWに行ってきました。出演はWidescreen Baroque、集団行動、そしてiron。真部脩一さんが関わる3つの名義が一夜に揃いました。
+TWILIGHT SHOWに行ってきました。出演はWidescreen Baroque、集団行動、そしてiron。真部さんがこれまで関わったバンドが集結した「真部脩一祭り」でした。
 
 **iron**
 
