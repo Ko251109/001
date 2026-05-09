@@ -1,2 +1,7 @@
 .DS_Store
 **/.DS_Store
+
+# Obsidian workspace (local-only)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
